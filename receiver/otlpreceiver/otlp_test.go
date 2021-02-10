@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/collector/otlperror"
 	"io/ioutil"
 	"net"
 	"net/http"
