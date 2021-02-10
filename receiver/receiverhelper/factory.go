@@ -43,7 +43,7 @@ func WithTraces(createTraceReceiver CreateTraceReceiver) FactoryOption {
 }
 
 // WithMetrics overrides the default "error not supported" implementation for CreateMetricsReceiver.
-func  WithMetrics(createMetricsReceiver CreateMetricsReceiver) FactoryOption {
+func WithMetrics(createMetricsReceiver CreateMetricsReceiver) FactoryOption {
 	return func(o *factory) {
 		o.createMetricsReceiver = createMetricsReceiver
 	}
