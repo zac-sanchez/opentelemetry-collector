@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/collector/otlperror"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -127,6 +128,66 @@ var resourceSpansOtlp = otlptrace.ResourceSpans{
 }
 
 var traceOtlp = pdata.TracesFromOtlp([]*otlptrace.ResourceSpans{&resourceSpansOtlp})
+
+func TestJsonHttpBackpressureError(t *testing.T) {
+
+	tests := []struct{
+		name 		string
+		respCode	int
+	}{
+		{
+			name: "Backpressure Error",
+			respCode: 429,
+		},
+	}
+
+	addr := testutil.GetAvailableLocalAddress(t)
+
+	// Set the buffer count to 1 to make it flush the test span immediately.
+	sink := new(consumertest.TracesSink)
+	ocr := newHTTPReceiver(t, addr, sink, nil)
+
+	require.NoError(t, ocr.Start(context.Background(), componenttest.NewNopHost()), "Failed to start trace receiver")
+	defer ocr.Shutdown(context.Background())
+
+	// TODO(nilebox): make starting server deterministic
+	// Wait for the servers to start
+	<-time.After(10 * time.Millisecond)
+
+	// Previously we used /v1/trace as the path. The correct path according to OTLP spec
+	// is /v1/traces. We currently support both on the receiving side to give graceful
+	// period for senders to roll out a fix, so we test for both paths to make sure
+	// the receiver works correctly.
+	targetURLPaths := []string{"/v1/trace", "/v1/traces"}
+
+	for _, test := range tests {
+		for _, targetURLPath := range targetURLPaths {
+			t.Run(test.name+targetURLPath, func(t *testing.T) {
+				url := fmt.Sprintf("http://%s%s", addr, targetURLPath)
+				sink.Reset()
+				testJsonHTTPBackpressureErrorHelper(t, url, sink, test.respCode)
+			})
+		}
+	}
+}
+
+func testJsonHTTPBackpressureErrorHelper(t *testing.T, url string, sink *consumertest.TracesSink, rc int) {
+	var buf *bytes.Buffer
+	var err error
+	buf = bytes.NewBuffer(traceJSON)
+	sink.SetConsumeError(otlperror.BackpressureError{})
+	req, err := http.NewRequest("POST", url, buf)
+	require.NoError(t, err, "Error creating trace POST request: %v", err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	println(resp.Header.Get("Content-Type"))
+	require.NotNil(t, resp)
+	require.NoError(t, err, "Error posting trace to grpc-gateway server: %v", err)
+	assert.Equal(t, rc, resp.StatusCode)
+}
 
 func TestJsonHttp(t *testing.T) {
 	tests := []struct {
