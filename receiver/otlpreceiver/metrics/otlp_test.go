@@ -228,9 +228,6 @@ func TestExportBackpressure(t *testing.T) {
 	assert.Nil(t, resp)
 }
 
-
-
-
 func makeMetricsServiceClient(port int) (collectormetrics.MetricsServiceClient, func(), error) {
 	addr := fmt.Sprintf(":%d", port)
 	cc, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock())
