@@ -224,7 +224,7 @@ func TestExportBackpressure(t *testing.T) {
 		},
 	}}
 	resp, err := metricsClient.Export(context.Background(), req)
-	assert.EqualError(t, err, "rpc error: code = Unknown desc = backpressure error")
+	assert.EqualError(t, err, "rpc error: code = ResourceExhausted desc = backpressure error")
 	assert.Nil(t, resp)
 }
 

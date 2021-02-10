@@ -12,5 +12,5 @@ func (b BackpressureError) Error() string {
 }
 
 func (b BackpressureError) GRPCStatus() *status.Status {
-	return status.New(codes.ResourceExhausted, "generic error")
+	return status.New(codes.ResourceExhausted, "backpressure error")
 }
