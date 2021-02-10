@@ -31,6 +31,7 @@ import (
 	otlpcommon "go.opentelemetry.io/collector/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/internal/data/protogen/metrics/v1"
 	"go.opentelemetry.io/collector/obsreport"
+	"go.opentelemetry.io/collector/otlperror"
 	"go.opentelemetry.io/collector/testutil"
 )
 
@@ -183,6 +184,53 @@ func TestExport_ErrorConsumer(t *testing.T) {
 	assert.Nil(t, resp)
 }
 
+func TestExportBackpressure(t *testing.T) {
+	metricSink := new(consumertest.MetricsSink)
+	metricSink.SetConsumeError(otlperror.BackpressureError{})
+	port, doneFn := otlpReceiverOnGRPCServer(t, metricSink)
+	defer doneFn()
+
+	metricsClient, metricsClientDoneFn, err := makeMetricsServiceClient(port)
+	require.NoError(t, err, "Failed to create the MetricsServiceClient: %v", err)
+	defer metricsClientDoneFn()
+
+	req := &collectormetrics.ExportMetricsServiceRequest{ResourceMetrics: []*otlpmetrics.ResourceMetrics{
+		{
+			InstrumentationLibraryMetrics: []*otlpmetrics.InstrumentationLibraryMetrics{
+				{
+					Metrics: []*otlpmetrics.Metric{
+						{
+							Name:        "mymetric",
+							Description: "My metric",
+							Unit:        "ms",
+							Data: &otlpmetrics.Metric_IntSum{
+								IntSum: &otlpmetrics.IntSum{
+									IsMonotonic:            true,
+									AggregationTemporality: otlpmetrics.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+									DataPoints: []*otlpmetrics.IntDataPoint{
+										{
+											Value: 123,
+										},
+										{
+											Value: 456,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}}
+	resp, err := metricsClient.Export(context.Background(), req)
+	assert.EqualError(t, err, "rpc error: code = Unknown desc = backpressure error")
+	assert.Nil(t, resp)
+}
+
+
+
+
 func makeMetricsServiceClient(port int) (collectormetrics.MetricsServiceClient, func(), error) {
 	addr := fmt.Sprintf(":%d", port)
 	cc, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock())
@@ -220,3 +268,4 @@ func otlpReceiverOnGRPCServer(t *testing.T, mc consumer.MetricsConsumer) (int, f
 
 	return port, done
 }
+
