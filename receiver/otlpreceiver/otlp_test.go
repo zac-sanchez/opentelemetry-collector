@@ -54,7 +54,7 @@ import (
 	otlptrace "go.opentelemetry.io/collector/internal/data/protogen/trace/v1"
 	"go.opentelemetry.io/collector/internal/testdata"
 	"go.opentelemetry.io/collector/obsreport/obsreporttest"
-	"go.opentelemetry.io/collector/otlperror"
+	"go.opentelemetry.io/collector/receiver/otlpreceiver/otlpreceivererror"
 	"go.opentelemetry.io/collector/testutil"
 	"go.opentelemetry.io/collector/translator/conventions"
 )
@@ -175,7 +175,7 @@ func testJsonHTTPBackpressureErrorHelper(t *testing.T, url string, sink *consume
 	var buf *bytes.Buffer
 	var err error
 	buf = bytes.NewBuffer(traceJSON)
-	sink.SetConsumeError(otlperror.BackpressureError{})
+	sink.SetConsumeError(otlpreceivererror.BackpressureError{})
 	req, err := http.NewRequest("POST", url, buf)
 	require.NoError(t, err, "Error creating trace POST request: %v", err)
 	req.Header.Set("Content-Type", "application/json")

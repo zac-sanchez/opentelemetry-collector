@@ -1,4 +1,4 @@
-package otlperror
+package otlpreceivererror
 
 import (
 	"google.golang.org/grpc/codes"

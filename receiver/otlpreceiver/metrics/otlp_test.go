@@ -31,7 +31,7 @@ import (
 	otlpcommon "go.opentelemetry.io/collector/internal/data/protogen/common/v1"
 	otlpmetrics "go.opentelemetry.io/collector/internal/data/protogen/metrics/v1"
 	"go.opentelemetry.io/collector/obsreport"
-	"go.opentelemetry.io/collector/otlperror"
+	"go.opentelemetry.io/collector/receiver/otlpreceiver/otlpreceivererror"
 	"go.opentelemetry.io/collector/testutil"
 )
 
@@ -186,7 +186,7 @@ func TestExport_ErrorConsumer(t *testing.T) {
 
 func TestExportBackpressure(t *testing.T) {
 	metricSink := new(consumertest.MetricsSink)
-	metricSink.SetConsumeError(otlperror.BackpressureError{})
+	metricSink.SetConsumeError(otlpreceivererror.BackpressureError{})
 	port, doneFn := otlpReceiverOnGRPCServer(t, metricSink)
 	defer doneFn()
 
